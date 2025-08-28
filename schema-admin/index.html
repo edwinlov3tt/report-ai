@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Schema Administrator - Report.AI</title>
+    <link rel="stylesheet" href="admin-styles.css">
+</head>
+<body>
+    <div class="admin-container">
+        <!-- Header -->
+        <header class="admin-header">
+            <div class="header-content">
+                <h1 class="admin-title">Schema Administrator</h1>
+                <div class="header-actions">
+                    <button id="import-btn" class="admin-btn">
+                        <span class="icon">📥</span> Import
+                    </button>
+                    <button id="export-btn" class="admin-btn primary">
+                        <span class="icon">📤</span> Export Schema
+                    </button>
+                    <a href="/report-ai/" class="admin-btn secondary">
+                        <span class="icon">🏠</span> Back to App
+                    </a>
+                </div>
+            </div>
+        </header>
+
+        <div class="admin-layout">
+            <!-- Sidebar -->
+            <aside class="admin-sidebar">
+                <div class="sidebar-header">
+                    <h2>Products</h2>
+                    <button id="add-product-btn" class="add-btn">+ Add Product</button>
+                </div>
+                
+                <!-- Search -->
+                <div class="search-container">
+                    <input type="text" id="product-search" class="search-input" placeholder="Search products...">
+                </div>
+                
+                <!-- Product List -->
+                <div id="product-list" class="product-list">
+                    <!-- Products will be dynamically loaded here -->
+                </div>
+            </aside>
+
+            <!-- Main Content -->
+            <main class="admin-main">
+                <div id="welcome-message" class="welcome-message">
+                    <h2>Welcome to Schema Administrator</h2>
+                    <p>Select a product from the sidebar to begin editing, or add a new product to get started.</p>
+                    <div class="quick-actions">
+                        <button onclick="document.getElementById('add-product-btn').click()" class="action-card">
+                            <span class="icon">➕</span>
+                            <h3>Add Product</h3>
+                            <p>Create a new product schema</p>
+                        </button>
+                        <button onclick="document.getElementById('import-btn').click()" class="action-card">
+                            <span class="icon">📥</span>
+                            <h3>Import Schema</h3>
+                            <p>Load existing configuration</p>
+                        </button>
+                        <button onclick="showTestingTab()" class="action-card">
+                            <span class="icon">🧪</span>
+                            <h3>Testing Tools</h3>
+                            <p>Test file routing & headers</p>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="product-editor" class="product-editor hidden">
+                    <!-- Product Editor Tabs -->
+                    <div class="editor-header">
+                        <h2 id="product-name-header">Product Name</h2>
+                        <button id="delete-product-btn" class="admin-btn danger">Delete Product</button>
+                    </div>
+
+                    <div class="tabs">
+                        <button class="tab-btn active" data-tab="basic">Basic Info</button>
+                        <button class="tab-btn" data-tab="tables">Tables</button>
+                        <button class="tab-btn" data-tab="lumina">Lumina Extractors</button>
+                        <button class="tab-btn" data-tab="ai">AI Config</button>
+                        <button class="tab-btn" data-tab="testing">Testing</button>
+                    </div>
+
+                    <!-- Tab Content -->
+                    <div class="tab-content">
+                        <!-- Basic Info Tab -->
+                        <div id="basic-tab" class="tab-panel active">
+                            <div class="form-group">
+                                <label for="product-name">Product Name</label>
+                                <input type="text" id="product-name" class="form-input">
+                                <small>Auto-generates slug: <span id="product-slug"></span></small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="product-platforms">Platforms</label>
+                                <input type="text" id="product-platforms" class="form-input" placeholder="e.g., Google Ads, YouTube">
+                                <small>Comma-separated list of platforms</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="product-notes">Notes</label>
+                                <textarea id="product-notes" class="form-textarea" rows="4" placeholder="Additional context or documentation..."></textarea>
+                            </div>
+                            
+                            <button id="save-basic-btn" class="admin-btn primary">Save Basic Info</button>
+                        </div>
+
+                        <!-- Tables Tab -->
+                        <div id="tables-tab" class="tab-panel">
+                            <div class="section-header">
+                                <h3>Table Configurations</h3>
+                                <button id="add-table-btn" class="add-btn">+ Add Table</button>
+                            </div>
+                            
+                            <div id="tables-list" class="tables-list">
+                                <!-- Tables will be dynamically loaded here -->
+                            </div>
+                            
+                            <!-- Table Editor -->
+                            <div id="table-editor" class="sub-editor hidden">
+                                <h4>Edit Table</h4>
+                                <div class="form-group">
+                                    <label for="table-title">Table Title</label>
+                                    <input type="text" id="table-title" class="form-input">
+                                    <small>Auto-generates slug: <span id="table-slug"></span></small>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="table-filenames">Expected Filenames</label>
+                                    <textarea id="table-filenames" class="form-textarea" rows="3" placeholder="One filename per line"></textarea>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="table-aliases">Aliases</label>
+                                    <textarea id="table-aliases" class="form-textarea" rows="2" placeholder="Alternative names, one per line"></textarea>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="table-headers">Headers</label>
+                                    <div class="header-tools">
+                                        <button id="infer-headers-btn" class="admin-btn secondary small">Infer from CSV</button>
+                                        <input type="file" id="csv-upload" accept=".csv" class="hidden">
+                                    </div>
+                                    <textarea id="table-headers" class="form-textarea" rows="6" placeholder="One header per line"></textarea>
+                                </div>
+                                
+                                <div class="form-actions">
+                                    <button id="save-table-btn" class="admin-btn primary">Save Table</button>
+                                    <button id="cancel-table-btn" class="admin-btn secondary">Cancel</button>
+                                    <button id="delete-table-btn" class="admin-btn danger">Delete Table</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Lumina Extractors Tab -->
+                        <div id="lumina-tab" class="tab-panel">
+                            <div class="section-header">
+                                <h3>Lumina Data Extractors</h3>
+                                <button id="add-extractor-btn" class="add-btn">+ Add Extractor</button>
+                            </div>
+                            
+                            <div id="extractors-list" class="extractors-list">
+                                <!-- Extractors will be dynamically loaded here -->
+                            </div>
+                            
+                            <!-- Extractor Editor -->
+                            <div id="extractor-editor" class="sub-editor hidden">
+                                <h4>Edit Extractor</h4>
+                                <div class="form-group">
+                                    <label for="extractor-name">Extractor Name</label>
+                                    <input type="text" id="extractor-name" class="form-input">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="extractor-path">Data Path</label>
+                                    <input type="text" id="extractor-path" class="form-input" placeholder="e.g., lineItems[].product">
+                                    <small>Use dot notation with [] for arrays</small>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="extractor-when">When Conditions (JSON)</label>
+                                    <textarea id="extractor-when" class="form-textarea" rows="2" placeholder='{"product": "YouTube"}'></textarea>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="extractor-aggregate">Aggregation</label>
+                                    <select id="extractor-aggregate" class="form-select">
+                                        <option value="">None</option>
+                                        <option value="first">First</option>
+                                        <option value="unique">Unique</option>
+                                        <option value="sum">Sum</option>
+                                        <option value="join">Join</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="test-json">Test JSON Payload</label>
+                                    <textarea id="test-json" class="form-textarea" rows="4" placeholder="Paste JSON to test extractor"></textarea>
+                                    <button id="test-extractor-btn" class="admin-btn secondary">Test Extractor</button>
+                                    <div id="test-result" class="test-result hidden"></div>
+                                </div>
+                                
+                                <div class="form-actions">
+                                    <button id="save-extractor-btn" class="admin-btn primary">Save Extractor</button>
+                                    <button id="cancel-extractor-btn" class="admin-btn secondary">Cancel</button>
+                                    <button id="delete-extractor-btn" class="admin-btn danger">Delete Extractor</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- AI Config Tab -->
+                        <div id="ai-tab" class="tab-panel">
+                            <div class="form-group">
+                                <label for="ai-guidelines">Analysis Guidelines</label>
+                                <textarea id="ai-guidelines" class="form-textarea" rows="4" placeholder="High-level instructions for AI analysis..."></textarea>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="ai-prompt">Custom Analysis Prompt</label>
+                                <textarea id="ai-prompt" class="form-textarea" rows="4" placeholder="Override default prompt (optional)"></textarea>
+                            </div>
+                            
+                            <div class="section-header">
+                                <h3>Benchmarks</h3>
+                                <button id="add-benchmark-btn" class="add-btn">+ Add Benchmark</button>
+                            </div>
+                            
+                            <div id="benchmarks-list" class="benchmarks-list">
+                                <!-- Benchmarks will be dynamically loaded here -->
+                            </div>
+                            
+                            <!-- Benchmark Editor -->
+                            <div id="benchmark-editor" class="sub-editor hidden">
+                                <h4>Edit Benchmark</h4>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="benchmark-metric">Metric Name</label>
+                                        <input type="text" id="benchmark-metric" class="form-input">
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label for="benchmark-goal">Goal Value</label>
+                                        <input type="number" id="benchmark-goal" class="form-input" step="0.01">
+                                    </div>
+                                </div>
+                                
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="benchmark-warn">Warning Threshold</label>
+                                        <input type="number" id="benchmark-warn" class="form-input" step="0.01">
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label for="benchmark-unit">Unit</label>
+                                        <select id="benchmark-unit" class="form-select">
+                                            <option value="percentage">Percentage</option>
+                                            <option value="ratio">Ratio</option>
+                                            <option value="USD">USD</option>
+                                            <option value="count">Count</option>
+                                            <option value="seconds">Seconds</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="benchmark-direction">Direction</label>
+                                    <select id="benchmark-direction" class="form-select">
+                                        <option value="higher_better">Higher is Better</option>
+                                        <option value="lower_better">Lower is Better</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="form-actions">
+                                    <button id="save-benchmark-btn" class="admin-btn primary">Save Benchmark</button>
+                                    <button id="cancel-benchmark-btn" class="admin-btn secondary">Cancel</button>
+                                    <button id="delete-benchmark-btn" class="admin-btn danger">Delete Benchmark</button>
+                                </div>
+                            </div>
+                            
+                            <button id="save-ai-btn" class="admin-btn primary">Save AI Config</button>
+                        </div>
+
+                        <!-- Testing Tab -->
+                        <div id="testing-tab" class="tab-panel">
+                            <div class="test-section">
+                                <h3>Filename Mapping Test</h3>
+                                <p>Test how a filename would route to products and tables</p>
+                                <div class="form-group">
+                                    <input type="text" id="test-filename" class="form-input" placeholder="e.g., report-youtube-placements.csv">
+                                    <button id="test-filename-btn" class="admin-btn primary">Test Mapping</button>
+                                </div>
+                                <div id="filename-test-result" class="test-result hidden"></div>
+                            </div>
+                            
+                            <div class="test-section">
+                                <h3>CSV Header Test</h3>
+                                <p>Upload a CSV to test header matching</p>
+                                <div class="form-group">
+                                    <input type="file" id="test-csv" accept=".csv" class="file-input">
+                                    <button id="test-csv-btn" class="admin-btn primary">Test Headers</button>
+                                </div>
+                                <div id="csv-test-result" class="test-result hidden"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- Import/Export Modal -->
+        <div id="import-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Import Schema</h2>
+                    <button class="close-modal" data-modal="import">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="import-options">
+                        <button id="import-file-btn" class="import-option">
+                            <span class="icon">📁</span>
+                            <h3>Import from File</h3>
+                            <p>Load a previously exported schema JSON file</p>
+                        </button>
+                        <button id="import-legacy-btn" class="import-option">
+                            <span class="icon">🔄</span>
+                            <h3>Import Legacy Format</h3>
+                            <p>Convert old csv-headers.json to new format</p>
+                        </button>
+                    </div>
+                    <input type="file" id="import-file-input" accept=".json" class="hidden">
+                    <div id="import-status" class="import-status hidden"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="schema-admin.js"></script>
+</body>
+</html>
