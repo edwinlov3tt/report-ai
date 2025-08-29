@@ -12,7 +12,7 @@
 .header-content {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
+    align-items: center;
     max-width: 1400px;
     margin: 0 auto;
 }
@@ -389,6 +389,9 @@
     padding: var(--space-6);
     margin-bottom: var(--space-6);
     transition: all var(--duration-normal);
+    min-width: 0;
+    overflow: hidden;
+    word-wrap: break-word;
 }
 
 .overview-card:hover {
@@ -677,15 +680,71 @@
 /* Export/Import Page Styles */
 .export-import-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
     gap: var(--space-6);
+    width: 100%;
+    max-width: 100%;
 }
 
-.export-options,
-.import-options {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-4);
+/* Export/Import options layout - override any conflicting grid rules */
+.overview-card .export-options,
+.overview-card .import-options {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: var(--space-4) !important;
+    grid-template-columns: none !important;
+}
+
+/* Hide scrollbars but maintain scroll functionality */
+.nav-menu,
+.admin-sidebar,
+.sidebar-content,
+.modal-content,
+.operation-logs,
+.backup-history,
+.testing-output,
+.analysis-content,
+.sections-grid,
+.hierarchy-tree,
+.ai-response,
+.code-block,
+.log-container,
+textarea,
+*[class*="scroll"],
+*[style*="overflow-y"],
+*[style*="overflow-x"],
+*[style*="overflow: auto"],
+*[style*="overflow: scroll"] {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* Internet Explorer 10+ */
+}
+
+.nav-menu::-webkit-scrollbar,
+.admin-sidebar::-webkit-scrollbar,
+.sidebar-content::-webkit-scrollbar,
+.modal-content::-webkit-scrollbar,
+.operation-logs::-webkit-scrollbar,
+.backup-history::-webkit-scrollbar,
+.testing-output::-webkit-scrollbar,
+.analysis-content::-webkit-scrollbar,
+.sections-grid::-webkit-scrollbar,
+.hierarchy-tree::-webkit-scrollbar,
+.ai-response::-webkit-scrollbar,
+.code-block::-webkit-scrollbar,
+.log-container::-webkit-scrollbar,
+textarea::-webkit-scrollbar,
+*[class*="scroll"]::-webkit-scrollbar,
+*[style*="overflow-y"]::-webkit-scrollbar,
+*[style*="overflow-x"]::-webkit-scrollbar,
+*[style*="overflow: auto"]::-webkit-scrollbar,
+*[style*="overflow: scroll"]::-webkit-scrollbar {
+    display: none; /* Safari and Chrome */
+}
+
+/* Global scrollbar hiding for any potentially scrollable element */
+*::-webkit-scrollbar {
+    width: 0px;
+    background: transparent;
 }
 
 .export-option,
@@ -694,6 +753,9 @@
     border-radius: var(--radii-md);
     padding: var(--space-4);
     transition: all var(--duration-normal);
+    min-width: 0;
+    overflow: hidden;
+    word-wrap: break-word;
 }
 
 .export-option:hover,
@@ -717,10 +779,43 @@
     font-size: var(--text-body-sm-size);
 }
 
+/* Fix button icon consistency and styling */
+.export-option .admin-btn,
+.import-option .admin-btn,
+.backup-controls .admin-btn {
+    width: 100%;
+    min-height: 44px;
+    padding: var(--space-3) var(--space-4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    font-size: var(--text-body-sm-size);
+    font-weight: 500;
+    white-space: nowrap;
+    box-sizing: border-box;
+    min-width: fit-content;
+}
+
+.export-option .admin-btn .icon,
+.import-option .admin-btn .icon,
+.backup-controls .admin-btn .icon {
+    font-size: 16px;
+    flex-shrink: 0;
+    line-height: 1;
+}
+
 .backup-controls {
     display: flex;
+    flex-wrap: wrap;
     gap: var(--space-3);
     margin-bottom: var(--space-4);
+}
+
+.backup-controls .admin-btn {
+    flex: 1;
+    min-width: 160px;
+    max-width: 200px;
 }
 
 .backup-history {
@@ -835,5 +930,17 @@
     
     .backup-actions {
         justify-content: center;
+    }
+    
+    .export-option .admin-btn,
+    .import-option .admin-btn {
+        font-size: var(--text-body-xs-size);
+        padding: var(--space-2) var(--space-3);
+        min-height: 40px;
+    }
+    
+    .backup-controls .admin-btn {
+        min-width: 140px;
+        max-width: none;
     }
 }
