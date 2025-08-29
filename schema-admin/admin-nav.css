@@ -16,7 +16,8 @@
 }
 
 .admin-nav.collapsed {
-    width: 60px;
+    transform: translateX(-220px);
+    width: 280px;
 }
 
 .admin-main-content {
@@ -27,7 +28,7 @@
 }
 
 .admin-main-content.nav-collapsed {
-    margin-left: 60px;
+    margin-left: 0;
 }
 
 /* Navigation Header */
@@ -269,6 +270,13 @@
         margin-left: 0;
     }
     
+    .admin-nav:not(.collapsed) {
+        transform: translateX(0);
+    }
+}
+
+/* Desktop expanded state */
+@media (min-width: 1025px) {
     .admin-nav:not(.collapsed) {
         transform: translateX(0);
     }
