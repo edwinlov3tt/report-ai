@@ -26,69 +26,79 @@ document.addEventListener('DOMContentLoaded', () => {
     updateStatistics();
 });
 
+// Helper function to safely add event listeners
+function safeAddEventListener(elementId, event, handler) {
+    const element = document.getElementById(elementId);
+    if (element) {
+        element.addEventListener(event, handler);
+    }
+}
+
 // Event Listeners
 function initializeEventListeners() {
     // Product management
-    document.getElementById('add-product-btn').addEventListener('click', showAddProductModal);
-    document.getElementById('add-subproduct-btn').addEventListener('click', showAddSubProductModal);
-    document.getElementById('delete-product-btn').addEventListener('click', deleteCurrentProduct);
-    document.getElementById('save-basic-btn').addEventListener('click', saveBasicInfo);
+    safeAddEventListener('add-product-btn', 'click', showAddProductModal);
+    safeAddEventListener('add-subproduct-btn', 'click', showAddSubProductModal);
+    safeAddEventListener('delete-product-btn', 'click', deleteCurrentProduct);
+    safeAddEventListener('save-basic-btn', 'click', saveBasicInfo);
     
     // Modal forms
-    document.getElementById('add-product-form').addEventListener('submit', handleAddProduct);
-    document.getElementById('add-subproduct-form').addEventListener('submit', handleAddSubProduct);
-    document.getElementById('edit-product-form').addEventListener('submit', handleEditProduct);
-    document.getElementById('edit-subproduct-form').addEventListener('submit', handleEditSubProduct);
+    safeAddEventListener('add-product-form', 'submit', handleAddProduct);
+    safeAddEventListener('add-subproduct-form', 'submit', handleAddSubProduct);
+    safeAddEventListener('edit-product-form', 'submit', handleEditProduct);
+    safeAddEventListener('edit-subproduct-form', 'submit', handleEditSubProduct);
     
     // Modal buttons
-    document.getElementById('delete-product-modal-btn').addEventListener('click', handleDeleteProductModal);
-    document.getElementById('delete-subproduct-modal-btn').addEventListener('click', handleDeleteSubProductModal);
+    safeAddEventListener('delete-product-modal-btn', 'click', handleDeleteProductModal);
+    safeAddEventListener('delete-subproduct-modal-btn', 'click', handleDeleteSubProductModal);
     
     // Table management
-    document.getElementById('add-table-btn').addEventListener('click', addNewTable);
-    document.getElementById('save-table-btn').addEventListener('click', saveTable);
-    document.getElementById('cancel-table-btn').addEventListener('click', cancelTableEdit);
-    document.getElementById('delete-table-btn').addEventListener('click', deleteTable);
-    document.getElementById('infer-headers-btn').addEventListener('click', () => {
-        document.getElementById('csv-upload').click();
+    safeAddEventListener('add-table-btn', 'click', addNewTable);
+    safeAddEventListener('save-table-btn', 'click', saveTable);
+    safeAddEventListener('cancel-table-btn', 'click', cancelTableEdit);
+    safeAddEventListener('delete-table-btn', 'click', deleteTable);
+    safeAddEventListener('infer-headers-btn', 'click', () => {
+        const csvUpload = document.getElementById('csv-upload');
+        if (csvUpload) csvUpload.click();
     });
-    document.getElementById('csv-upload').addEventListener('change', inferHeadersFromCSV);
+    safeAddEventListener('csv-upload', 'change', inferHeadersFromCSV);
     
     // Extractor management
-    document.getElementById('add-extractor-btn').addEventListener('click', addNewExtractor);
-    document.getElementById('save-extractor-btn').addEventListener('click', saveExtractor);
-    document.getElementById('cancel-extractor-btn').addEventListener('click', cancelExtractorEdit);
-    document.getElementById('delete-extractor-btn').addEventListener('click', deleteExtractor);
-    document.getElementById('test-extractor-btn').addEventListener('click', testExtractor);
+    safeAddEventListener('add-extractor-btn', 'click', addNewExtractor);
+    safeAddEventListener('save-extractor-btn', 'click', saveExtractor);
+    safeAddEventListener('cancel-extractor-btn', 'click', cancelExtractorEdit);
+    safeAddEventListener('delete-extractor-btn', 'click', deleteExtractor);
+    safeAddEventListener('test-extractor-btn', 'click', testExtractor);
     
     // Benchmark management
-    document.getElementById('add-benchmark-btn').addEventListener('click', addNewBenchmark);
-    document.getElementById('save-benchmark-btn').addEventListener('click', saveBenchmark);
-    document.getElementById('cancel-benchmark-btn').addEventListener('click', cancelBenchmarkEdit);
-    document.getElementById('delete-benchmark-btn').addEventListener('click', deleteBenchmark);
+    safeAddEventListener('add-benchmark-btn', 'click', addNewBenchmark);
+    safeAddEventListener('save-benchmark-btn', 'click', saveBenchmark);
+    safeAddEventListener('cancel-benchmark-btn', 'click', cancelBenchmarkEdit);
+    safeAddEventListener('delete-benchmark-btn', 'click', deleteBenchmark);
     
     // AI Config
-    document.getElementById('save-ai-btn').addEventListener('click', saveAIConfig);
+    safeAddEventListener('save-ai-btn', 'click', saveAIConfig);
     
-    // Import/Export
-    document.getElementById('import-btn').addEventListener('click', showImportModal);
-    document.getElementById('export-btn').addEventListener('click', exportSchema);
-    document.getElementById('import-file-btn').addEventListener('click', () => {
-        document.getElementById('import-file-input').click();
+    // Import/Export (legacy - these buttons may not exist)
+    safeAddEventListener('import-btn', 'click', showImportModal);
+    safeAddEventListener('export-btn', 'click', exportSchema);
+    safeAddEventListener('import-file-btn', 'click', () => {
+        const importInput = document.getElementById('import-file-input');
+        if (importInput) importInput.click();
     });
-    document.getElementById('import-file-input').addEventListener('change', importSchemaFile);
-    document.getElementById('import-legacy-btn').addEventListener('click', importLegacyFormat);
+    safeAddEventListener('import-file-input', 'change', importSchemaFile);
+    safeAddEventListener('import-legacy-btn', 'click', importLegacyFormat);
     
     // Testing
-    document.getElementById('test-filename-btn').addEventListener('click', testFilenameMapping);
-    document.getElementById('test-csv-btn').addEventListener('click', testCSVHeaders);
+    safeAddEventListener('test-filename-btn', 'click', testFilenameMapping);
+    safeAddEventListener('test-csv-btn', 'click', testCSVHeaders);
     
     // Search
-    document.getElementById('hierarchy-search').addEventListener('input', filterHierarchy);
+    safeAddEventListener('hierarchy-search', 'input', filterHierarchy);
     
     // Filter buttons
-    document.getElementById('products-count').addEventListener('click', () => toggleFilter('products'));
-    document.getElementById('subproducts-count').addEventListener('click', () => toggleFilter('subproducts'));
+    safeAddEventListener('products-count', 'click', () => toggleFilter('products'));
+    safeAddEventListener('subproducts-count', 'click', () => toggleFilter('subproducts'));
     
     // Quick actions
     document.querySelectorAll('.action-card').forEach(card => {
@@ -115,14 +125,14 @@ function initializeEventListeners() {
     });
     
     // Auto-slug generation
-    document.getElementById('product-name').addEventListener('input', generateProductSlug);
-    document.getElementById('table-title').addEventListener('input', generateTableSlug);
+    safeAddEventListener('product-name', 'input', generateProductSlug);
+    safeAddEventListener('table-title', 'input', generateTableSlug);
     
     // Modal slug generation
-    document.getElementById('new-product-name')?.addEventListener('input', generateNewProductSlug);
-    document.getElementById('new-subproduct-name')?.addEventListener('input', generateNewSubProductSlug);
-    document.getElementById('edit-product-name')?.addEventListener('input', generateEditProductSlug);
-    document.getElementById('edit-subproduct-name')?.addEventListener('input', generateEditSubProductSlug);
+    safeAddEventListener('new-product-name', 'input', generateNewProductSlug);
+    safeAddEventListener('new-subproduct-name', 'input', generateNewSubProductSlug);
+    safeAddEventListener('edit-product-name', 'input', generateEditProductSlug);
+    safeAddEventListener('edit-subproduct-name', 'input', generateEditSubProductSlug);
     
     // Warn before leaving with unsaved changes
     window.addEventListener('beforeunload', (e) => {
