@@ -39,6 +39,12 @@
     background: var(--bg-muted);
     border-bottom: 1px solid var(--border-default);
     min-height: 64px;
+    flex-shrink: 0;
+}
+
+.admin-nav.collapsed .nav-header {
+    justify-content: center;
+    padding: var(--space-4) var(--space-2);
 }
 
 .nav-brand {
@@ -68,8 +74,8 @@
 }
 
 .nav-toggle {
-    background: var(--button-gray-bg);
-    color: var(--button-gray-fg);
+    background: #CF0E0F;
+    color: white;
     border: none;
     border-radius: var(--radii-sm);
     width: 32px;
@@ -83,8 +89,16 @@
 }
 
 .nav-toggle:hover {
-    background: var(--button-gray-hover-bg);
+    background: #A00B0C;
     transform: var(--motion-tap-transform);
+}
+
+.admin-nav.collapsed .nav-toggle {
+    position: fixed;
+    left: 12px;
+    top: 20px;
+    z-index: 1001;
+    box-shadow: var(--shadow-md);
 }
 
 /* Navigation Menu */

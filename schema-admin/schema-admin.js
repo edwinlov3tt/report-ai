@@ -4,29 +4,45 @@
 // Global state
 const SchemaState = {
     currentSchema: {
-        version: 1,
-        products: {}
+        version: 2,
+        products: {},
+        subproducts: {},
+        connections: {} // productId -> [subproductIds]
     },
     currentProduct: null,
+    currentSubProduct: null,
     currentTable: null,
     currentExtractor: null,
     currentBenchmark: null,
-    unsavedChanges: false
+    unsavedChanges: false,
+    activeFilter: null // 'products', 'subproducts', or null
 };
 
 // Initialize application
 document.addEventListener('DOMContentLoaded', () => {
     initializeEventListeners();
     loadSchemaFromStorage();
-    renderProductList();
+    renderHierarchyTree();
+    updateStatistics();
 });
 
 // Event Listeners
 function initializeEventListeners() {
     // Product management
-    document.getElementById('add-product-btn').addEventListener('click', addNewProduct);
+    document.getElementById('add-product-btn').addEventListener('click', showAddProductModal);
+    document.getElementById('add-subproduct-btn').addEventListener('click', showAddSubProductModal);
     document.getElementById('delete-product-btn').addEventListener('click', deleteCurrentProduct);
     document.getElementById('save-basic-btn').addEventListener('click', saveBasicInfo);
+    
+    // Modal forms
+    document.getElementById('add-product-form').addEventListener('submit', handleAddProduct);
+    document.getElementById('add-subproduct-form').addEventListener('submit', handleAddSubProduct);
+    document.getElementById('edit-product-form').addEventListener('submit', handleEditProduct);
+    document.getElementById('edit-subproduct-form').addEventListener('submit', handleEditSubProduct);
+    
+    // Modal buttons
+    document.getElementById('delete-product-modal-btn').addEventListener('click', handleDeleteProductModal);
+    document.getElementById('delete-subproduct-modal-btn').addEventListener('click', handleDeleteSubProductModal);
     
     // Table management
     document.getElementById('add-table-btn').addEventListener('click', addNewTable);
@@ -68,7 +84,20 @@ function initializeEventListeners() {
     document.getElementById('test-csv-btn').addEventListener('click', testCSVHeaders);
     
     // Search
-    document.getElementById('product-search').addEventListener('input', filterProducts);
+    document.getElementById('hierarchy-search').addEventListener('input', filterHierarchy);
+    
+    // Filter buttons
+    document.getElementById('products-count').addEventListener('click', () => toggleFilter('products'));
+    document.getElementById('subproducts-count').addEventListener('click', () => toggleFilter('subproducts'));
+    
+    // Quick actions
+    document.querySelectorAll('.action-card').forEach(card => {
+        if (card.onclick) return; // Skip if already has onclick
+        const text = card.querySelector('h4')?.textContent;
+        if (text === 'Add Product') card.addEventListener('click', showAddProductModal);
+        if (text === 'Add SubProduct') card.addEventListener('click', showAddSubProductModal);
+        if (text === 'Testing Tools') card.addEventListener('click', showTestingInterface);
+    });
     
     // Tabs
     document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -80,9 +109,20 @@ function initializeEventListeners() {
         btn.addEventListener('click', (e) => hideModal(e.target.dataset.modal));
     });
     
+    // Modal cancel buttons
+    document.querySelectorAll('[data-close-modal]').forEach(btn => {
+        btn.addEventListener('click', (e) => hideModal(e.target.dataset.closeModal));
+    });
+    
     // Auto-slug generation
     document.getElementById('product-name').addEventListener('input', generateProductSlug);
     document.getElementById('table-title').addEventListener('input', generateTableSlug);
+    
+    // Modal slug generation
+    document.getElementById('new-product-name')?.addEventListener('input', generateNewProductSlug);
+    document.getElementById('new-subproduct-name')?.addEventListener('input', generateNewSubProductSlug);
+    document.getElementById('edit-product-name')?.addEventListener('input', generateEditProductSlug);
+    document.getElementById('edit-subproduct-name')?.addEventListener('input', generateEditSubProductSlug);
     
     // Warn before leaving with unsaved changes
     window.addEventListener('beforeunload', (e) => {
@@ -95,19 +135,75 @@ function initializeEventListeners() {
 
 // Product Management
 function addNewProduct() {
-    const name = prompt('Enter product name:');
+    // Legacy function - now replaced by modal-based approach
+    showAddProductModal();
+}
+
+// Modal Management Functions
+function showAddProductModal() {
+    // Clear form
+    document.getElementById('add-product-form').reset();
+    document.getElementById('new-product-slug').textContent = '';
+    document.getElementById('add-product-modal').classList.remove('hidden');
+}
+
+function showAddSubProductModal() {
+    // Clear form and populate products dropdown
+    document.getElementById('add-subproduct-form').reset();
+    document.getElementById('new-subproduct-slug').textContent = '';
+    populateProductsDropdown('subproduct-parent');
+    document.getElementById('add-subproduct-modal').classList.remove('hidden');
+}
+
+function showEditProductModal(productId) {
+    const product = SchemaState.currentSchema.products[productId];
+    if (!product) return;
+    
+    document.getElementById('edit-product-id').value = productId;
+    document.getElementById('edit-product-name').value = productId;
+    document.getElementById('edit-product-slug').textContent = product.product_slug || '';
+    document.getElementById('edit-product-platforms').value = (product.platforms || []).join(', ');
+    document.getElementById('edit-product-notes').value = product.notes || '';
+    
+    document.getElementById('edit-product-modal').classList.remove('hidden');
+}
+
+function showEditSubProductModal(subproductId) {
+    const subproduct = SchemaState.currentSchema.subproducts[subproductId];
+    if (!subproduct) return;
+    
+    document.getElementById('edit-subproduct-id').value = subproductId;
+    document.getElementById('edit-subproduct-name').value = subproductId;
+    document.getElementById('edit-subproduct-slug').textContent = subproduct.slug || '';
+    document.getElementById('edit-subproduct-description').value = subproduct.description || '';
+    
+    populateProductsDropdown('edit-subproduct-parent');
+    document.getElementById('edit-subproduct-parent').value = subproduct.parent_product || '';
+    
+    document.getElementById('edit-subproduct-modal').classList.remove('hidden');
+}
+
+// Form Handlers
+function handleAddProduct(e) {
+    e.preventDefault();
+    
+    const name = document.getElementById('new-product-name').value.trim();
     if (!name) return;
     
-    const slug = generateSlug(name);
     if (SchemaState.currentSchema.products[name]) {
         alert('Product already exists!');
         return;
     }
     
+    const platforms = document.getElementById('new-product-platforms').value
+        .split(',')
+        .map(p => p.trim())
+        .filter(p => p);
+    
     SchemaState.currentSchema.products[name] = {
-        product_slug: slug,
-        platforms: [],
-        notes: '',
+        product_slug: generateSlug(name),
+        platforms: platforms,
+        notes: document.getElementById('new-product-notes').value || '',
         tables: [],
         lumina: {
             extractors: []
@@ -120,10 +216,214 @@ function addNewProduct() {
         }
     };
     
-    SchemaState.currentProduct = name;
     SchemaState.unsavedChanges = true;
-    renderProductList();
-    selectProduct(name);
+    hideModal('add-product');
+    renderHierarchyTree();
+    updateStatistics();
+    showNotification('Product created successfully');
+}
+
+function handleAddSubProduct(e) {
+    e.preventDefault();
+    
+    const name = document.getElementById('new-subproduct-name').value.trim();
+    const parentProduct = document.getElementById('subproduct-parent').value;
+    
+    if (!name || !parentProduct) {
+        alert('Please fill in all required fields');
+        return;
+    }
+    
+    if (SchemaState.currentSchema.subproducts[name]) {
+        alert('SubProduct already exists!');
+        return;
+    }
+    
+    SchemaState.currentSchema.subproducts[name] = {
+        slug: generateSlug(name),
+        parent_product: parentProduct,
+        description: document.getElementById('new-subproduct-description').value || '',
+        tactic_types: []
+    };
+    
+    // Add to connections
+    if (!SchemaState.currentSchema.connections[parentProduct]) {
+        SchemaState.currentSchema.connections[parentProduct] = [];
+    }
+    SchemaState.currentSchema.connections[parentProduct].push(name);
+    
+    SchemaState.unsavedChanges = true;
+    hideModal('add-subproduct');
+    renderHierarchyTree();
+    updateStatistics();
+    showNotification('SubProduct created successfully');
+}
+
+function handleEditProduct(e) {
+    e.preventDefault();
+    
+    const productId = document.getElementById('edit-product-id').value;
+    const newName = document.getElementById('edit-product-name').value.trim();
+    
+    if (!newName) return;
+    
+    const product = SchemaState.currentSchema.products[productId];
+    const platforms = document.getElementById('edit-product-platforms').value
+        .split(',')
+        .map(p => p.trim())
+        .filter(p => p);
+    
+    // Update product data
+    product.product_slug = generateSlug(newName);
+    product.platforms = platforms;
+    product.notes = document.getElementById('edit-product-notes').value;
+    
+    // If name changed, update the key
+    if (newName !== productId) {
+        SchemaState.currentSchema.products[newName] = product;
+        delete SchemaState.currentSchema.products[productId];
+        
+        // Update connections
+        if (SchemaState.currentSchema.connections[productId]) {
+            SchemaState.currentSchema.connections[newName] = SchemaState.currentSchema.connections[productId];
+            delete SchemaState.currentSchema.connections[productId];
+        }
+        
+        // Update subproduct parent references
+        Object.values(SchemaState.currentSchema.subproducts).forEach(subproduct => {
+            if (subproduct.parent_product === productId) {
+                subproduct.parent_product = newName;
+            }
+        });
+    }
+    
+    SchemaState.unsavedChanges = true;
+    hideModal('edit-product');
+    renderHierarchyTree();
+    updateStatistics();
+    showNotification('Product updated successfully');
+}
+
+function handleEditSubProduct(e) {
+    e.preventDefault();
+    
+    const subproductId = document.getElementById('edit-subproduct-id').value;
+    const newName = document.getElementById('edit-subproduct-name').value.trim();
+    const newParent = document.getElementById('edit-subproduct-parent').value;
+    
+    if (!newName || !newParent) {
+        alert('Please fill in all required fields');
+        return;
+    }
+    
+    const subproduct = SchemaState.currentSchema.subproducts[subproductId];
+    const oldParent = subproduct.parent_product;
+    
+    // Update subproduct data
+    subproduct.slug = generateSlug(newName);
+    subproduct.parent_product = newParent;
+    subproduct.description = document.getElementById('edit-subproduct-description').value;
+    
+    // If name changed, update the key
+    if (newName !== subproductId) {
+        SchemaState.currentSchema.subproducts[newName] = subproduct;
+        delete SchemaState.currentSchema.subproducts[subproductId];
+        
+        // Update connection references
+        updateConnectionReferences(oldParent, subproductId, newParent, newName);
+    } else if (oldParent !== newParent) {
+        // Only parent changed
+        updateConnectionReferences(oldParent, subproductId, newParent, subproductId);
+    }
+    
+    SchemaState.unsavedChanges = true;
+    hideModal('edit-subproduct');
+    renderHierarchyTree();
+    updateStatistics();
+    showNotification('SubProduct updated successfully');
+}
+
+function handleDeleteProductModal() {
+    const productId = document.getElementById('edit-product-id').value;
+    if (!confirm(`Delete product "${productId}" and all its subproducts?`)) return;
+    
+    // Delete associated subproducts
+    const connectedSubProducts = SchemaState.currentSchema.connections[productId] || [];
+    connectedSubProducts.forEach(subproductId => {
+        delete SchemaState.currentSchema.subproducts[subproductId];
+    });
+    
+    // Delete product and connections
+    delete SchemaState.currentSchema.products[productId];
+    delete SchemaState.currentSchema.connections[productId];
+    
+    SchemaState.unsavedChanges = true;
+    hideModal('edit-product');
+    renderHierarchyTree();
+    updateStatistics();
+    showNotification('Product deleted successfully');
+}
+
+function handleDeleteSubProductModal() {
+    const subproductId = document.getElementById('edit-subproduct-id').value;
+    const subproduct = SchemaState.currentSchema.subproducts[subproductId];
+    
+    if (!confirm(`Delete subproduct "${subproductId}"?`)) return;
+    
+    // Remove from connections
+    const parentProduct = subproduct.parent_product;
+    if (SchemaState.currentSchema.connections[parentProduct]) {
+        const index = SchemaState.currentSchema.connections[parentProduct].indexOf(subproductId);
+        if (index > -1) {
+            SchemaState.currentSchema.connections[parentProduct].splice(index, 1);
+        }
+    }
+    
+    // Delete subproduct
+    delete SchemaState.currentSchema.subproducts[subproductId];
+    
+    SchemaState.unsavedChanges = true;
+    hideModal('edit-subproduct');
+    renderHierarchyTree();
+    updateStatistics();
+    showNotification('SubProduct deleted successfully');
+}
+
+// Helper Functions
+function populateProductsDropdown(selectId) {
+    const select = document.getElementById(selectId);
+    const products = Object.keys(SchemaState.currentSchema.products).sort();
+    
+    // Clear existing options except first
+    while (select.children.length > 1) {
+        select.removeChild(select.lastChild);
+    }
+    
+    // Add product options
+    products.forEach(productName => {
+        const option = document.createElement('option');
+        option.value = productName;
+        option.textContent = productName;
+        select.appendChild(option);
+    });
+}
+
+function updateConnectionReferences(oldParent, oldSubproductId, newParent, newSubproductId) {
+    // Remove from old parent
+    if (SchemaState.currentSchema.connections[oldParent]) {
+        const index = SchemaState.currentSchema.connections[oldParent].indexOf(oldSubproductId);
+        if (index > -1) {
+            SchemaState.currentSchema.connections[oldParent].splice(index, 1);
+        }
+    }
+    
+    // Add to new parent
+    if (!SchemaState.currentSchema.connections[newParent]) {
+        SchemaState.currentSchema.connections[newParent] = [];
+    }
+    if (!SchemaState.currentSchema.connections[newParent].includes(newSubproductId)) {
+        SchemaState.currentSchema.connections[newParent].push(newSubproductId);
+    }
 }
 
 function deleteCurrentProduct() {
@@ -139,6 +439,7 @@ function deleteCurrentProduct() {
 
 function selectProduct(productName) {
     SchemaState.currentProduct = productName;
+    SchemaState.currentSubProduct = null;
     const product = SchemaState.currentSchema.products[productName];
     
     // Show editor
@@ -168,13 +469,37 @@ function selectProduct(productName) {
     // Switch to basic tab
     switchTab('basic');
     
-    // Highlight selected product
-    document.querySelectorAll('.product-item').forEach(item => {
-        item.classList.remove('active');
-        if (item.dataset.product === productName) {
-            item.classList.add('active');
-        }
+    // Highlight selected product in hierarchy
+    document.querySelectorAll('.product-node').forEach(node => {
+        node.classList.remove('active');
     });
+    document.querySelectorAll('.subproduct-node').forEach(node => {
+        node.classList.remove('active');
+    });
+    
+    const selectedNode = document.querySelector(`.product-node[onclick*="'${productName}'"]`);
+    if (selectedNode) selectedNode.classList.add('active');
+}
+
+function selectSubProduct(subproductId) {
+    SchemaState.currentSubProduct = subproductId;
+    const subproduct = SchemaState.currentSchema.subproducts[subproductId];
+    
+    // For now, select the parent product
+    if (subproduct && subproduct.parent_product) {
+        selectProduct(subproduct.parent_product);
+    }
+    
+    // Highlight selected subproduct in hierarchy
+    document.querySelectorAll('.product-node').forEach(node => {
+        node.classList.remove('active');
+    });
+    document.querySelectorAll('.subproduct-node').forEach(node => {
+        node.classList.remove('active');
+    });
+    
+    const selectedNode = document.querySelector(`.subproduct-node[onclick*="'${subproductId}'"]`);
+    if (selectedNode) selectedNode.classList.add('active');
 }
 
 function saveBasicInfo() {
@@ -571,6 +896,31 @@ function generateTableSlug() {
     document.getElementById('table-slug').textContent = slug;
 }
 
+// Modal slug generation functions
+function generateNewProductSlug() {
+    const name = document.getElementById('new-product-name').value;
+    const slug = generateSlug(name);
+    document.getElementById('new-product-slug').textContent = slug;
+}
+
+function generateNewSubProductSlug() {
+    const name = document.getElementById('new-subproduct-name').value;
+    const slug = generateSlug(name);
+    document.getElementById('new-subproduct-slug').textContent = slug;
+}
+
+function generateEditProductSlug() {
+    const name = document.getElementById('edit-product-name').value;
+    const slug = generateSlug(name);
+    document.getElementById('edit-product-slug').textContent = slug;
+}
+
+function generateEditSubProductSlug() {
+    const name = document.getElementById('edit-subproduct-name').value;
+    const slug = generateSlug(name);
+    document.getElementById('edit-subproduct-slug').textContent = slug;
+}
+
 function parseCSVHeaders(csvText) {
     const lines = csvText.split('\n');
     if (lines.length === 0) return [];
@@ -646,17 +996,80 @@ function tryParseJSON(str) {
 
 // UI Functions
 function renderProductList() {
-    const list = document.getElementById('product-list');
+    // Legacy function - now replaced by hierarchy tree
+    renderHierarchyTree();
+}
+
+function renderHierarchyTree() {
+    const tree = document.getElementById('hierarchy-tree');
     const products = Object.keys(SchemaState.currentSchema.products).sort();
     
-    list.innerHTML = products.map(name => `
-        <div class="product-item ${name === SchemaState.currentProduct ? 'active' : ''}" 
-             data-product="${name}" 
-             onclick="selectProduct('${name}')">
-            <span class="product-name">${name}</span>
-            <span class="product-count">${SchemaState.currentSchema.products[name].tables?.length || 0} tables</span>
-        </div>
-    `).join('');
+    if (products.length === 0) {
+        tree.innerHTML = '<div class="empty-state">No products created yet</div>';
+        return;
+    }
+    
+    tree.innerHTML = products.map(productName => {
+        const product = SchemaState.currentSchema.products[productName];
+        const subproducts = SchemaState.currentSchema.connections[productName] || [];
+        const tableCount = product.tables?.length || 0;
+        
+        return `
+            <div class="hierarchy-product">
+                <div class="product-node" onclick="selectProduct('${productName}')" oncontextmenu="showEditProductModal('${productName}'); return false;">
+                    <div class="product-info">
+                        <div class="product-name">📦 ${productName}</div>
+                        <div class="product-meta">${tableCount} tables</div>
+                    </div>
+                    <div class="product-actions">
+                        <button class="action-btn small" onclick="event.stopPropagation(); showEditProductModal('${productName}')" title="Edit Product">✏️</button>
+                    </div>
+                </div>
+                ${subproducts.length > 0 ? `
+                    <div class="subproducts-list">
+                        ${subproducts.map(subproductId => {
+                            const subproduct = SchemaState.currentSchema.subproducts[subproductId];
+                            if (!subproduct) return '';
+                            
+                            const tacticCount = subproduct.tactic_types?.length || 0;
+                            return `
+                                <div class="subproduct-node" onclick="selectSubProduct('${subproductId}')" oncontextmenu="showEditSubProductModal('${subproductId}'); return false;">
+                                    <div class="subproduct-info">
+                                        <div class="subproduct-name">🔗 ${subproductId}</div>
+                                        <div class="subproduct-meta">${tacticCount} tactics</div>
+                                    </div>
+                                    <div class="subproduct-actions">
+                                        <button class="action-btn small" onclick="event.stopPropagation(); showEditSubProductModal('${subproductId}')" title="Edit SubProduct">✏️</button>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    }).join('');
+}
+
+function updateStatistics() {
+    const productCount = Object.keys(SchemaState.currentSchema.products).length;
+    const subproductCount = Object.keys(SchemaState.currentSchema.subproducts).length;
+    const connectionCount = Object.keys(SchemaState.currentSchema.connections).reduce((total, productId) => {
+        return total + (SchemaState.currentSchema.connections[productId]?.length || 0);
+    }, 0);
+    const tableCount = Object.values(SchemaState.currentSchema.products).reduce((total, product) => {
+        return total + (product.tables?.length || 0);
+    }, 0);
+    
+    // Update sidebar stats with line breaks
+    document.getElementById('products-count').innerHTML = `${productCount}<br>Products`;
+    document.getElementById('subproducts-count').innerHTML = `${subproductCount}<br>SubProducts`;
+    
+    // Update welcome section stats
+    document.getElementById('total-products-stat').textContent = productCount;
+    document.getElementById('total-subproducts-stat').textContent = subproductCount;
+    document.getElementById('total-connections-stat').textContent = connectionCount;
+    document.getElementById('total-tables-stat').textContent = tableCount;
 }
 
 function renderTablesList() {
@@ -732,22 +1145,78 @@ function renderBenchmarksList() {
 }
 
 function filterProducts() {
-    const search = document.getElementById('product-search').value.toLowerCase();
-    const items = document.querySelectorAll('.product-item');
+    // Legacy function - now replaced by hierarchy filter
+    filterHierarchy();
+}
+
+function filterHierarchy() {
+    const search = document.getElementById('hierarchy-search').value.toLowerCase();
+    const productNodes = document.querySelectorAll('.hierarchy-product');
     
-    items.forEach(item => {
-        const name = item.dataset.product.toLowerCase();
-        const product = SchemaState.currentSchema.products[item.dataset.product];
-        const platforms = (product.platforms || []).join(' ').toLowerCase();
-        const notes = (product.notes || '').toLowerCase();
+    productNodes.forEach(productNode => {
+        const productName = productNode.querySelector('.product-name').textContent.toLowerCase();
+        const subproductNodes = productNode.querySelectorAll('.subproduct-node');
         
-        const visible = !search || 
-                       name.includes(search) || 
-                       platforms.includes(search) || 
-                       notes.includes(search);
+        let productVisible = !search || productName.includes(search);
+        let hasVisibleSubproducts = false;
         
-        item.style.display = visible ? 'flex' : 'none';
+        // Apply active filter
+        if (SchemaState.activeFilter === 'products') {
+            // Only show products (hide subproducts)
+            subproductNodes.forEach(subproductNode => {
+                subproductNode.style.display = 'none';
+            });
+        } else if (SchemaState.activeFilter === 'subproducts') {
+            // Only show subproducts that match search
+            subproductNodes.forEach(subproductNode => {
+                const subproductName = subproductNode.querySelector('.subproduct-name').textContent.toLowerCase();
+                const subproductVisible = !search || subproductName.includes(search);
+                subproductNode.style.display = subproductVisible ? 'flex' : 'none';
+                if (subproductVisible) hasVisibleSubproducts = true;
+            });
+            // Hide products when showing only subproducts
+            productVisible = false;
+        } else {
+            // Normal search behavior (show both)
+            subproductNodes.forEach(subproductNode => {
+                const subproductName = subproductNode.querySelector('.subproduct-name').textContent.toLowerCase();
+                const subproductVisible = !search || subproductName.includes(search);
+                subproductNode.style.display = subproductVisible ? 'flex' : 'none';
+                if (subproductVisible) hasVisibleSubproducts = true;
+            });
+        }
+        
+        // Show product if it matches or has visible subproducts (unless filtered out)
+        const shouldShowProduct = SchemaState.activeFilter === 'subproducts' ? hasVisibleSubproducts : 
+                                 (productVisible || hasVisibleSubproducts);
+        productNode.style.display = shouldShowProduct ? 'block' : 'none';
     });
+}
+
+function toggleFilter(filterType) {
+    const productsBtn = document.getElementById('products-count');
+    const subproductsBtn = document.getElementById('subproducts-count');
+    
+    // Clear previous active states
+    productsBtn.classList.remove('active');
+    subproductsBtn.classList.remove('active');
+    
+    // Toggle filter
+    if (SchemaState.activeFilter === filterType) {
+        // Turn off filter
+        SchemaState.activeFilter = null;
+    } else {
+        // Set new filter
+        SchemaState.activeFilter = filterType;
+        if (filterType === 'products') {
+            productsBtn.classList.add('active');
+        } else if (filterType === 'subproducts') {
+            subproductsBtn.classList.add('active');
+        }
+    }
+    
+    // Apply filter
+    filterHierarchy();
 }
 
 // Tab Management
@@ -916,6 +1385,10 @@ function showTestingTab() {
         }
     }
     switchTab('testing');
+}
+
+function showTestingInterface() {
+    showTestingTab();
 }
 
 // Storage Functions

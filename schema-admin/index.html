@@ -7,24 +7,25 @@
     <link rel="stylesheet" href="../context/creative-docs/design-tokens.css">
     <link rel="stylesheet" href="admin-fixes.css">
     <link rel="stylesheet" href="admin-nav.css">
+    <link rel="stylesheet" href="schema-design-system.css">
     <link rel="stylesheet" href="admin-styles.css">
 </head>
 <body class="has-admin-nav">
     <div class="admin-container">
         <!-- Header -->
-        <header class="admin-header">
+        <header class="page-header">
             <div class="header-content">
-                <h1 class="admin-title">Schema Administrator</h1>
+                <div class="page-title-section">
+                    <h1 class="page-title">Schema Administrator</h1>
+                    <p class="page-subtitle">Manage product hierarchies, subproducts, and tactic configurations</p>
+                </div>
                 <div class="header-actions">
-                    <button id="import-btn" class="admin-btn">
-                        <span class="icon">📥</span> Import
+                    <button id="add-product-btn" class="admin-btn secondary">
+                        <span class="icon">+</span> Add Product
                     </button>
-                    <button id="export-btn" class="admin-btn primary">
-                        <span class="icon">📤</span> Export Schema
+                    <button id="add-subproduct-btn" class="admin-btn primary">
+                        <span class="icon">+</span> Add SubProduct
                     </button>
-                    <a href="/report-ai/" class="admin-btn secondary">
-                        <span class="icon">🏠</span> Back to App
-                    </a>
                 </div>
             </div>
         </header>
@@ -33,42 +34,77 @@
             <!-- Sidebar -->
             <aside class="admin-sidebar">
                 <div class="sidebar-header">
-                    <h2>Products</h2>
-                    <button id="add-product-btn" class="add-btn">+ Add Product</button>
+                    <h2>Product Hierarchy</h2>
+                    <div class="sidebar-stats">
+                        <span id="products-count" class="stat-item">0 Products</span>
+                        <span id="subproducts-count" class="stat-item">0 SubProducts</span>
+                    </div>
                 </div>
                 
                 <!-- Search -->
                 <div class="search-container">
-                    <input type="text" id="product-search" class="search-input" placeholder="Search products...">
+                    <input type="text" id="hierarchy-search" class="search-input" placeholder="Search products & subproducts...">
                 </div>
                 
-                <!-- Product List -->
-                <div id="product-list" class="product-list">
-                    <!-- Products will be dynamically loaded here -->
+                <!-- Hierarchy Tree -->
+                <div id="hierarchy-tree" class="hierarchy-tree">
+                    <!-- Product hierarchy will be dynamically loaded here -->
                 </div>
             </aside>
 
             <!-- Main Content -->
             <main class="admin-main">
-                <div id="welcome-message" class="welcome-message">
-                    <h2>Welcome to Schema Administrator</h2>
-                    <p>Select a product from the sidebar to begin editing, or add a new product to get started.</p>
-                    <div class="quick-actions">
-                        <button onclick="document.getElementById('add-product-btn').click()" class="action-card">
-                            <span class="icon">➕</span>
-                            <h3>Add Product</h3>
-                            <p>Create a new product schema</p>
-                        </button>
-                        <button onclick="document.getElementById('import-btn').click()" class="action-card">
-                            <span class="icon">📥</span>
-                            <h3>Import Schema</h3>
-                            <p>Load existing configuration</p>
-                        </button>
-                        <button onclick="showTestingTab()" class="action-card">
-                            <span class="icon">🧪</span>
-                            <h3>Testing Tools</h3>
-                            <p>Test file routing & headers</p>
-                        </button>
+                <div id="welcome-message" class="welcome-section">
+                    <div class="content-header">
+                        <h2 class="content-title">Schema Overview</h2>
+                        <p class="content-description">Manage your product hierarchy, configure subproduct relationships, and maintain tactic schemas</p>
+                    </div>
+                    
+                    <!-- Statistics Grid -->
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-value" id="total-products-stat">0</div>
+                            <div class="stat-label">Products</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="total-subproducts-stat">0</div>
+                            <div class="stat-label">SubProducts</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="total-connections-stat">0</div>
+                            <div class="stat-label">Connections</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="total-tables-stat">0</div>
+                            <div class="stat-label">Tables</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Quick Actions -->
+                    <div class="overview-card">
+                        <h3 class="form-section-title">Quick Actions</h3>
+                        <div class="quick-actions-grid">
+                            <button onclick="showAddProductModal()" class="action-card">
+                                <span class="icon">📦</span>
+                                <h4>Add Product</h4>
+                                <p>Create a new product schema</p>
+                            </button>
+                            <button onclick="showAddSubProductModal()" class="action-card">
+                                <span class="icon">🔗</span>
+                                <h4>Add SubProduct</h4>
+                                <p>Create and connect subproduct</p>
+                            </button>
+                            <button onclick="document.getElementById('import-btn').click()" class="action-card">
+                                <span class="icon">📥</span>
+                                <h4>Import Schema</h4>
+                                <p>Load existing configuration</p>
+                            </button>
+                            <button onclick="showTestingInterface()" class="action-card">
+                                <span class="icon">🧪</span>
+                                <h4>Testing Tools</h4>
+                                <p>Test file routing & headers</p>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -335,6 +371,160 @@
                     </div>
                     <input type="file" id="import-file-input" accept=".json" class="hidden">
                     <div id="import-status" class="import-status hidden"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Product Modal -->
+        <div id="add-product-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Add New Product</h2>
+                    <button class="close-modal" data-modal="add-product">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form id="add-product-form" class="modal-form">
+                        <div class="form-group">
+                            <label for="new-product-name">Product Name *</label>
+                            <input type="text" id="new-product-name" class="form-input" placeholder="e.g., Google Ads" required>
+                            <small class="form-help">Auto-generates slug: <span id="new-product-slug"></span></small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="new-product-platforms">Platforms</label>
+                            <input type="text" id="new-product-platforms" class="form-input" placeholder="e.g., Google Ads, YouTube">
+                            <small class="form-help">Comma-separated list of platforms</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="new-product-notes">Notes</label>
+                            <textarea id="new-product-notes" class="form-textarea" rows="3" placeholder="Additional context or documentation..."></textarea>
+                        </div>
+                        
+                        <div class="modal-actions">
+                            <button type="button" class="admin-btn secondary" data-close-modal="add-product">Cancel</button>
+                            <button type="submit" class="admin-btn primary">Create Product</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add SubProduct Modal -->
+        <div id="add-subproduct-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Add New SubProduct</h2>
+                    <button class="close-modal" data-modal="add-subproduct">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form id="add-subproduct-form" class="modal-form">
+                        <div class="form-group">
+                            <label for="subproduct-parent">Parent Product *</label>
+                            <select id="subproduct-parent" class="form-select" required>
+                                <option value="">Select a parent product...</option>
+                                <!-- Products will be populated dynamically -->
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="new-subproduct-name">SubProduct Name *</label>
+                            <input type="text" id="new-subproduct-name" class="form-input" placeholder="e.g., Search Campaigns" required>
+                            <small class="form-help">Auto-generates slug: <span id="new-subproduct-slug"></span></small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="new-subproduct-description">Description</label>
+                            <textarea id="new-subproduct-description" class="form-textarea" rows="3" placeholder="Brief description of this subproduct..."></textarea>
+                        </div>
+                        
+                        <div class="modal-actions">
+                            <button type="button" class="admin-btn secondary" data-close-modal="add-subproduct">Cancel</button>
+                            <button type="submit" class="admin-btn primary">Create SubProduct</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Edit Product Modal -->
+        <div id="edit-product-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Edit Product</h2>
+                    <button class="close-modal" data-modal="edit-product">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form id="edit-product-form" class="modal-form">
+                        <input type="hidden" id="edit-product-id">
+                        
+                        <div class="form-group">
+                            <label for="edit-product-name">Product Name *</label>
+                            <input type="text" id="edit-product-name" class="form-input" required>
+                            <small class="form-help">Auto-generates slug: <span id="edit-product-slug"></span></small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="edit-product-platforms">Platforms</label>
+                            <input type="text" id="edit-product-platforms" class="form-input">
+                            <small class="form-help">Comma-separated list of platforms</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="edit-product-notes">Notes</label>
+                            <textarea id="edit-product-notes" class="form-textarea" rows="3"></textarea>
+                        </div>
+                        
+                        <div class="modal-actions">
+                            <button type="button" class="admin-btn danger" id="delete-product-modal-btn">Delete Product</button>
+                            <div class="modal-actions-right">
+                                <button type="button" class="admin-btn secondary" data-close-modal="edit-product">Cancel</button>
+                                <button type="submit" class="admin-btn primary">Update Product</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Edit SubProduct Modal -->
+        <div id="edit-subproduct-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Edit SubProduct</h2>
+                    <button class="close-modal" data-modal="edit-subproduct">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form id="edit-subproduct-form" class="modal-form">
+                        <input type="hidden" id="edit-subproduct-id">
+                        
+                        <div class="form-group">
+                            <label for="edit-subproduct-parent">Parent Product *</label>
+                            <select id="edit-subproduct-parent" class="form-select" required>
+                                <option value="">Select a parent product...</option>
+                                <!-- Products will be populated dynamically -->
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="edit-subproduct-name">SubProduct Name *</label>
+                            <input type="text" id="edit-subproduct-name" class="form-input" required>
+                            <small class="form-help">Auto-generates slug: <span id="edit-subproduct-slug"></span></small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="edit-subproduct-description">Description</label>
+                            <textarea id="edit-subproduct-description" class="form-textarea" rows="3"></textarea>
+                        </div>
+                        
+                        <div class="modal-actions">
+                            <button type="button" class="admin-btn danger" id="delete-subproduct-modal-btn">Delete SubProduct</button>
+                            <div class="modal-actions-right">
+                                <button type="button" class="admin-btn secondary" data-close-modal="edit-subproduct">Cancel</button>
+                                <button type="submit" class="admin-btn primary">Update SubProduct</button>
+                            </div>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>

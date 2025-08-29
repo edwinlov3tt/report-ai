@@ -9,7 +9,8 @@ class AdminNavigation {
 
     init() {
         this.createNavigation();
-        this.bindEvents();
+        // Use setTimeout to ensure DOM is ready after innerHTML manipulation
+        setTimeout(() => this.bindEvents(), 10);
     }
 
     createNavigation() {
