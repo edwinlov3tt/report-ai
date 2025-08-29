@@ -2,7 +2,8 @@
 class AdminNavigation {
     constructor() {
         this.currentPath = window.location.pathname;
-        this.isCollapsed = localStorage.getItem('admin-nav-collapsed') === 'true';
+        // Set collapsed to true by default, only expand if explicitly set to false
+        this.isCollapsed = localStorage.getItem('admin-nav-collapsed') !== 'false';
         this.init();
     }
 

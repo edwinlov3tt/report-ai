@@ -159,6 +159,25 @@ function setupEventListeners() {
         });
     }
 
+    // Analysis tone selector
+    const toneSelect = document.getElementById('analysis-tone');
+    const toneDescription = document.getElementById('tone-description');
+    if (toneSelect && toneDescription) {
+        const toneDescriptions = {
+            'concise': 'Brief, to-the-point analysis with key insights only',
+            'professional': 'Formal business language suitable for executive reports',
+            'conversational': 'Friendly, approachable tone for team discussions',
+            'encouraging': 'Positive, motivational language highlighting opportunities',
+            'analytical': 'Data-driven insights with detailed metrics and benchmarks',
+            'casual': 'Relaxed, informal tone for internal team use'
+        };
+        
+        toneSelect.addEventListener('change', (e) => {
+            const selectedTone = e.target.value;
+            toneDescription.textContent = toneDescriptions[selectedTone] || '';
+        });
+    }
+
     // Scenario selection
     const scenarioCards = document.querySelectorAll('.scenario-card');
     scenarioCards.forEach(card => {
@@ -291,22 +310,29 @@ function updateTestButtonState() {
         const selectedModel = availableModels.find(m => m.id === modelSelect.value);
         const modelConfigured = selectedModel && selectedModel.configured;
         
-        runTestBtn.disabled = !(hasModel && hasScenario && modelConfigured);
+        // Enable button if model is configured, regardless of scenario selection
+        runTestBtn.disabled = !hasModel || !modelConfigured;
         
         if (!modelConfigured && hasModel) {
             runTestBtn.textContent = 'API Key Required';
-        } else if (!hasScenario) {
-            runTestBtn.textContent = 'Test AI';
+        } else if (!hasScenario && availableSections.length > 0) {
+            runTestBtn.textContent = 'Test All Sections';
+        } else if (hasScenario) {
+            runTestBtn.textContent = 'Test Section';
         } else {
-            runTestBtn.textContent = 'Run Test';
+            runTestBtn.textContent = 'Test AI';
         }
     }
 }
 
 // Run the current test
 async function runCurrentTest() {
-    if (!currentScenario) {
-        showError('Please select a test scenario');
+    if (!currentScenario && availableSections.length > 0) {
+        // Run all sections when none is selected
+        await runAllSectionsTest();
+        return;
+    } else if (!currentScenario) {
+        showError('No sections available to test');
         return;
     }
     
@@ -317,6 +343,70 @@ async function runCurrentTest() {
     }
     
     await runAITest(prompt, currentScenario);
+}
+
+// Run tests for all available sections
+async function runAllSectionsTest() {
+    if (availableSections.length === 0) {
+        showError('No sections available to test');
+        return;
+    }
+    
+    showLoading(`Testing all ${availableSections.length} sections...`);
+    
+    let allResults = [];
+    
+    for (const section of availableSections) {
+        const sectionScenario = `section-${section.id}`;
+        const prompt = generatePromptForScenario(sectionScenario);
+        
+        if (prompt) {
+            try {
+                const result = await runSingleSectionTest(prompt, section);
+                allResults.push(result);
+            } catch (error) {
+                console.error(`Failed to test section ${section.name}:`, error);
+                allResults.push({
+                    section: section,
+                    success: false,
+                    error: error.message || 'Unknown error'
+                });
+            }
+        }
+    }
+    
+    showAllSectionsResults(allResults);
+}
+
+// Run a single section test (helper for batch testing)
+async function runSingleSectionTest(prompt, section) {
+    const modelSelect = document.getElementById('ai-model-select');
+    const tempSlider = document.getElementById('temperature');
+    const maxTokensSelect = document.getElementById('max-tokens');
+    
+    const config = {
+        model: modelSelect.value,
+        temperature: parseFloat(tempSlider.value),
+        prompt: prompt.trim(),
+        maxTokens: parseInt(maxTokensSelect.value)
+    };
+    
+    const response = await fetch('/api/ai-test.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(config)
+    });
+    
+    const data = await response.json();
+    
+    return {
+        section: section,
+        success: data.success,
+        data: data.data,
+        error: data.error
+    };
 }
 
 // Run a quick test with the first available scenario
@@ -528,6 +618,44 @@ function showResults(result) {
             </div>
         `;
     }
+}
+
+// Show results for all sections test
+function showAllSectionsResults(results) {
+    const resultsContainer = document.querySelector('.results-content-area');
+    
+    const successfulTests = results.filter(r => r.success);
+    const failedTests = results.filter(r => !r.success);
+    
+    resultsContainer.innerHTML = `
+        <div class="results-content">
+            <h4>All Sections Test Results - ${results.length} Sections</h4>
+            <div class="results-meta">
+                <span>Successful: ${successfulTests.length}</span>
+                <span>Failed: ${failedTests.length}</span>
+                <span>${new Date().toLocaleTimeString()}</span>
+            </div>
+            
+            ${results.map(result => `
+                <div class="section-result ${result.success ? 'success' : 'failed'}">
+                    <h5>
+                        ${result.section.name} 
+                        <span class="section-key-badge">${result.section.section_key}</span>
+                        <span class="test-status ${result.success ? 'success' : 'failed'}">
+                            ${result.success ? '✓' : '✗'}
+                        </span>
+                    </h5>
+                    ${result.success ? 
+                        `<div class="ai-response">${formatAIResponse(result.data.response.substring(0, 300))}${result.data.response.length > 300 ? '...' : ''}</div>` :
+                        `<div class="error-message">Error: ${result.error}</div>`
+                    }
+                </div>
+            `).join('')}
+        </div>
+    `;
+    
+    // Show clear button after test
+    updateClearButton('Clear Results');
 }
 
 // Format AI response for display
