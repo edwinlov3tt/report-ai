@@ -102,10 +102,30 @@ class AdminNavigation {
     }
 
     bindEvents() {
-        const toggleBtn = document.getElementById('nav-toggle');
-        if (toggleBtn) {
-            toggleBtn.addEventListener('click', () => this.toggleNavigation());
-        }
+        // Use event delegation for the toggle button
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('#nav-toggle') || e.target.closest('.nav-toggle')) {
+                console.log('Toggle clicked via delegation!'); // Debug log
+                e.preventDefault();
+                e.stopPropagation();
+                this.toggleNavigation();
+            }
+        });
+
+        // Also try direct event listener as backup
+        setTimeout(() => {
+            const toggleBtn = document.getElementById('nav-toggle');
+            console.log('Toggle button found in timeout:', toggleBtn); // Debug log
+            if (toggleBtn && !toggleBtn.hasAttribute('data-listener-added')) {
+                toggleBtn.setAttribute('data-listener-added', 'true');
+                toggleBtn.addEventListener('click', (e) => {
+                    console.log('Toggle clicked via direct listener!'); // Debug log
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.toggleNavigation();
+                });
+            }
+        }, 50);
 
         // Handle escape key to collapse nav
         document.addEventListener('keydown', (e) => {
@@ -116,17 +136,31 @@ class AdminNavigation {
     }
 
     toggleNavigation() {
+        console.log('toggleNavigation called, current collapsed state:', this.isCollapsed); // Debug log
+        
         const nav = document.querySelector('.admin-nav');
         const mainContent = document.querySelector('.admin-main-content');
         const toggleIcon = document.querySelector('.toggle-icon');
         
+        console.log('Elements found - nav:', nav, 'mainContent:', mainContent, 'toggleIcon:', toggleIcon); // Debug log
+        
         this.isCollapsed = !this.isCollapsed;
         
-        nav.classList.toggle('collapsed', this.isCollapsed);
-        mainContent.classList.toggle('nav-collapsed', this.isCollapsed);
-        toggleIcon.textContent = this.isCollapsed ? '→' : '←';
+        if (nav) {
+            nav.classList.toggle('collapsed', this.isCollapsed);
+            console.log('Nav collapsed class:', nav.classList.contains('collapsed')); // Debug log
+        }
+        
+        if (mainContent) {
+            mainContent.classList.toggle('nav-collapsed', this.isCollapsed);
+        }
+        
+        if (toggleIcon) {
+            toggleIcon.textContent = this.isCollapsed ? '→' : '←';
+        }
         
         localStorage.setItem('admin-nav-collapsed', this.isCollapsed);
+        console.log('New collapsed state:', this.isCollapsed); // Debug log
     }
 
     isCurrentPath(path, exact = false) {

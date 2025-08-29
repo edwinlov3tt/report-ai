@@ -73,6 +73,18 @@
     overflow: hidden;
 }
 
+.admin-nav.collapsed .brand-icon {
+    opacity: 0;
+    width: 0;
+    overflow: hidden;
+}
+
+.admin-nav.collapsed .nav-brand {
+    opacity: 0;
+    width: 0;
+    overflow: hidden;
+}
+
 .nav-toggle {
     background: #CF0E0F;
     color: white;
